@@ -10,6 +10,10 @@ permissions:
 jobs:
   release:
     runs-on: macos-15
+    env:
+      # Optional: a fine-grained PAT with contents:write on marcusmalloc/homebrew-tap.
+      # When present, the cask in the tap is bumped automatically after each release.
+      TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -23,3 +27,20 @@ jobs:
           gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.sha256 \
             --title "BareTab ${GITHUB_REF_NAME#v}" \
             --generate-notes
+
+      - name: Update Homebrew tap
+        if: env.TAP_TOKEN != ''
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          sha="$(cut -d' ' -f1 dist/BareTab-"$version".zip.sha256)"
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/marcusmalloc/homebrew-tap.git" tap
+          mkdir -p tap/Casks
+          sed -e "s/^  version \".*\"/  version \"$version\"/" \
+              -e "s/^  sha256 \".*\"/  sha256 \"$sha\"/" \
+              Casks/baretab.rb > tap/Casks/baretab.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/baretab.rb
+          git commit -m "baretab $version" || exit 0
+          git push
