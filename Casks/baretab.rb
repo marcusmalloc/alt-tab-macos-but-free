@@ -10,15 +10,14 @@ cask "baretab" do
   desc "Minimal native Command-Tab window switcher"
   homepage "https://github.com/marcusmalloc/alt-tab-macos-but-free"
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "BareTab.app"
 
   # The app is ad-hoc signed (no Apple Developer ID), so Gatekeeper would refuse to open it.
   # Clearing the quarantine flag lets it launch normally.
-  postflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-dr", "com.apple.quarantine", "#{appdir}/BareTab.app"]
+  postflight_steps do
+    run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{appdir}}/BareTab.app"]
   end
 
   zap trash: [
