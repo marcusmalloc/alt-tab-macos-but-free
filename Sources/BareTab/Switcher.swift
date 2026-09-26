@@ -86,6 +86,8 @@ final class Switcher {
     }
 
     private func commit() {
+        // With no snapshot taken this gesture, the list still holds the previous one.
+        guard isActive else { return }
         let selected = selectedWindow
         end()
         if let selected {
