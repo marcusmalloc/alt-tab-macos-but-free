@@ -7,8 +7,9 @@
 Minimal native MacOS window switcher designed to keep you in flow. Hold **Command**, press **Tab** to cycle
 through the windows on the current desktop and the display under the pointer. **Shift-Tab** cycles backward, **Escape**
 cancels, and **Q** twice within two seconds closes the highlighted window. To cycle through windows on
-every display instead, turn on **Include All Displays** in the menu bar icon's menu. **Group by Display** then lists
-them under a heading per display. **Show Switcher On** chooses whether the switcher appears on the display under the
+every display instead, turn on **Include All Displays** in the menu bar icon's menu. It also lists windows that window managers such as
+AeroSpace park off screen on hidden workspaces; picking one lets the window manager switch to it. **Group by Display**
+then lists them under a heading per display. **Show Switcher On** chooses whether the switcher appears on the display under the
 pointer or always on a display you pick.
 
 While the switcher is open, **Up** and **Down** move the highlight, **Left** and **Right** jump between displays

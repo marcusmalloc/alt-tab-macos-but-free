@@ -2,7 +2,7 @@ import AppKit
 @preconcurrency import ApplicationServices
 import ServiceManagement
 
-/// Menu bar shell: status item, Accessibility permission, launch at login.
+/// Menu bar shell: status item, settings menu, Accessibility permission, launch at login.
 /// The switching itself lives in `Switcher`.
 @main
 enum BareTabApp {
