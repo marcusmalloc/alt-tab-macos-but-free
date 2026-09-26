@@ -32,6 +32,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let groupByDisplay = NSMenuItem(
         title: "Group by Display", action: #selector(toggleGroupByDisplay), keyEquivalent: ""
     )
+    private let vimKeys = NSMenuItem(
+        title: "Vim Keys", action: #selector(toggleVimKeys), keyEquivalent: ""
+    )
 
     private var permissionPoll: Timer?
 
@@ -40,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     func applicationDidFinishLaunching(_ notification: Notification) {
         installStatusItem()
         keyboard.handler = { [weak self] key in self?.switcher.handle(key) }
+        keyboard.vimKeys = Settings.vimKeys
 
         if !startKeyboardIfTrusted() {
             promptForAccessibility()
@@ -72,6 +76,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         groupByDisplay.target = self
         groupByDisplay.state = Settings.groupByDisplay ? .on : .off
         groupByDisplay.indentationLevel = 1
+        vimKeys.target = self
+        vimKeys.state = Settings.vimKeys ? .on : .off
 
         let menu = NSMenu()
         menu.addItem(statusLine)
@@ -79,6 +85,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         menu.addItem(launchAtLogin)
         menu.addItem(allDisplays)
         menu.addItem(groupByDisplay)
+        menu.addItem(vimKeys)
         menu.addItem(NSMenuItem(
             title: "Quit BareTab", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"
         ))
@@ -108,6 +115,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @objc private func toggleGroupByDisplay() {
         Settings.groupByDisplay.toggle()
         groupByDisplay.state = Settings.groupByDisplay ? .on : .off
+    }
+
+    @objc private func toggleVimKeys() {
+        Settings.vimKeys.toggle()
+        keyboard.vimKeys = Settings.vimKeys
+        vimKeys.state = Settings.vimKeys ? .on : .off
     }
 
     /// Grouping only means something while every display is included, so it is greyed out otherwise.

@@ -30,7 +30,13 @@ final class KeyboardTap {
         static let up: Int64 = 126
     }
 
+    /// Letters that move the highlight while `vimKeys` is on.
+    private static let vimMotions: [String: Key] = [
+        "j": .forward, "k": .backward, "l": .nextGroup, "h": .previousGroup
+    ]
+
     var handler: ((Key) -> Void)?
+    var vimKeys = false
     private(set) var isRunning = false
 
     private var tap: CFMachPort?
@@ -128,9 +134,16 @@ final class KeyboardTap {
             default:
                 break
             }
-            // Matched by character rather than key code so it works on any keyboard layout.
-            if NSEvent(cgEvent: event)?.charactersIgnoringModifiers?.lowercased() == "q" {
+            // Letters are matched by character rather than key code so they work on any keyboard layout.
+            guard let character = NSEvent(cgEvent: event)?.charactersIgnoringModifiers?.lowercased() else {
+                return passThrough
+            }
+            if character == "q" {
                 emit(.quit)
+                return nil
+            }
+            if vimKeys, let motion = Self.vimMotions[character] {
+                emit(motion)
                 return nil
             }
             return passThrough

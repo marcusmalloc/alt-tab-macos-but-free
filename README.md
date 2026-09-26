@@ -11,7 +11,8 @@ every display instead, turn on **Include All Displays** in the menu bar icon's m
 them under a heading per display.
 
 While the switcher is open, **Up** and **Down** move the highlight, **Left** and **Right** jump between displays
-when grouped, and **Return** switches right away without waiting for Command to be released.
+when grouped, and **Return** switches right away without waiting for Command to be released. With **Vim Keys** on in
+the menu, **J**, **K**, **H** and **L** do the same as Down, Up, Left and Right.
 
 If someone stumbles across this and would like a feature added, feel free to create an issue and I will add it within a day.
 I will not be adding window previews.

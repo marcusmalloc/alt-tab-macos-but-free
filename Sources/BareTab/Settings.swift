@@ -5,6 +5,7 @@ import Foundation
 enum Settings {
     private static let allDisplaysKey = "allDisplays"
     private static let groupByDisplayKey = "groupByDisplay"
+    private static let vimKeysKey = "vimKeys"
 
     /// Whether the switcher lists windows from every display, rather than only the one under the pointer.
     static var allDisplays: Bool {
@@ -17,5 +18,11 @@ enum Settings {
     static var groupByDisplay: Bool {
         get { UserDefaults.standard.bool(forKey: groupByDisplayKey) }
         set { UserDefaults.standard.set(newValue, forKey: groupByDisplayKey) }
+    }
+
+    /// Whether J, K, H and L move the highlight like Down, Up, Left and Right while the switcher is open.
+    static var vimKeys: Bool {
+        get { UserDefaults.standard.bool(forKey: vimKeysKey) }
+        set { UserDefaults.standard.set(newValue, forKey: vimKeysKey) }
     }
 }
