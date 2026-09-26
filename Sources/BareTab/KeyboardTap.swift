@@ -42,6 +42,8 @@ final class KeyboardTap {
     private var tap: CFMachPort?
     /// True between the first Command-Tab and the release of Command.
     private var inGesture = false
+    /// The key that ended the last gesture, whose repeats are swallowed until a key is pressed afresh.
+    private var endingKey: Int64?
 
     // MARK: - Start and stop
 
@@ -78,6 +80,7 @@ final class KeyboardTap {
         self.tap = nil
         isRunning = false
         inGesture = false
+        endingKey = nil
     }
 
     // MARK: - Routing
@@ -102,6 +105,14 @@ final class KeyboardTap {
         case .keyDown:
             let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
 
+            // Return or Escape held past the repeat delay would otherwise reach the window just switched
+            // to as Command-Return or Command-Escape.
+            if event.getIntegerValueField(.keyboardEventAutorepeat) != 0 {
+                if keyCode == endingKey { return nil }
+            } else {
+                endingKey = nil
+            }
+
             if keyCode == KeyCode.tab, event.flags.contains(.maskCommand) {
                 inGesture = true
                 emit(event.flags.contains(.maskShift) ? .backward : .forward)
@@ -112,11 +123,13 @@ final class KeyboardTap {
             switch keyCode {
             case KeyCode.escape:
                 inGesture = false
+                endingKey = keyCode
                 emit(.cancel)
                 return nil
             case KeyCode.returnKey, KeyCode.keypadEnter:
                 // Switches now; releasing Command afterwards then does nothing more.
                 inGesture = false
+                endingKey = keyCode
                 emit(.commit)
                 return nil
             case KeyCode.down:
