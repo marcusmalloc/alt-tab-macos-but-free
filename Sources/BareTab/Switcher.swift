@@ -60,7 +60,8 @@ final class Switcher {
         model.headings = snapshot.headings
         model.selection = 0
 
-        let display = snapshot.display
+        // A chosen display that is not connected falls back to the one under the pointer.
+        let display = Settings.switcherDisplay.flatMap(WindowCatalog.display(withUUID:)) ?? snapshot.display
         let gesture = generation
         showTimer = Timer.scheduledTimer(withTimeInterval: Self.showDelay, repeats: false) { [weak self] _ in
             MainActor.assumeIsolated {

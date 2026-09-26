@@ -17,7 +17,7 @@ enum BareTabApp {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemValidation {
     private let keyboard = KeyboardTap()
     private let switcher = Switcher()
 
@@ -35,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let vimKeys = NSMenuItem(
         title: "Vim Keys", action: #selector(toggleVimKeys), keyEquivalent: ""
     )
+    private let switcherDisplayMenu = NSMenu()
 
     private var permissionPoll: Timer?
 
@@ -78,6 +79,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         groupByDisplay.indentationLevel = 1
         vimKeys.target = self
         vimKeys.state = Settings.vimKeys ? .on : .off
+        switcherDisplayMenu.delegate = self
+
+        let switcherDisplay = NSMenuItem(title: "Show Switcher On", action: nil, keyEquivalent: "")
+        switcherDisplay.submenu = switcherDisplayMenu
 
         let menu = NSMenu()
         menu.addItem(statusLine)
@@ -85,6 +90,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         menu.addItem(launchAtLogin)
         menu.addItem(allDisplays)
         menu.addItem(groupByDisplay)
+        menu.addItem(switcherDisplay)
         menu.addItem(vimKeys)
         menu.addItem(NSMenuItem(
             title: "Quit BareTab", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"
@@ -115,6 +121,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     @objc private func toggleGroupByDisplay() {
         Settings.groupByDisplay.toggle()
         groupByDisplay.state = Settings.groupByDisplay ? .on : .off
+    }
+
+    /// Rebuilt each time it opens, so it lists the displays connected right now. A chosen display that
+    /// is not connected is kept in settings but shown as following the pointer, which is what happens.
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard menu === switcherDisplayMenu else { return }
+        let displays = WindowCatalog.connectedDisplays()
+        let chosen = displays.first { $0.uuid == Settings.switcherDisplay }?.uuid
+
+        menu.removeAllItems()
+        menu.addItem(switcherDisplayItem(title: "Display Under Pointer", uuid: nil, chosen: chosen))
+        menu.addItem(.separator())
+        for display in displays {
+            menu.addItem(switcherDisplayItem(title: display.name, uuid: display.uuid, chosen: chosen))
+        }
+    }
+
+    private func switcherDisplayItem(title: String, uuid: String?, chosen: String?) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: #selector(chooseSwitcherDisplay(_:)), keyEquivalent: "")
+        item.target = self
+        item.representedObject = uuid
+        item.state = uuid == chosen ? .on : .off
+        return item
+    }
+
+    @objc private func chooseSwitcherDisplay(_ sender: NSMenuItem) {
+        Settings.switcherDisplay = sender.representedObject as? String
     }
 
     @objc private func toggleVimKeys() {

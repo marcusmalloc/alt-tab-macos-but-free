@@ -6,6 +6,7 @@ enum Settings {
     private static let allDisplaysKey = "allDisplays"
     private static let groupByDisplayKey = "groupByDisplay"
     private static let vimKeysKey = "vimKeys"
+    private static let switcherDisplayKey = "switcherDisplay"
 
     /// Whether the switcher lists windows from every display, rather than only the one under the pointer.
     static var allDisplays: Bool {
@@ -24,5 +25,12 @@ enum Settings {
     static var vimKeys: Bool {
         get { UserDefaults.standard.bool(forKey: vimKeysKey) }
         set { UserDefaults.standard.set(newValue, forKey: vimKeysKey) }
+    }
+
+    /// UUID of the display the switcher always appears on, or nil to follow the pointer. Which windows
+    /// are listed does not change.
+    static var switcherDisplay: String? {
+        get { UserDefaults.standard.string(forKey: switcherDisplayKey) }
+        set { UserDefaults.standard.set(newValue, forKey: switcherDisplayKey) }
     }
 }

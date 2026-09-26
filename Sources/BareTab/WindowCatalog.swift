@@ -334,6 +334,22 @@ enum WindowCatalog {
         return display
     }
 
+    /// Connected displays, identified by UUID because a display's ID can change when it is reconnected.
+    static func connectedDisplays() -> [(id: CGDirectDisplayID, uuid: String, name: String)] {
+        NSScreen.screens.compactMap { screen in
+            guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+                  let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue(),
+                  let string = CFUUIDCreateString(nil, uuid)
+            else { return nil }
+            return (id, string as String, screen.localizedName)
+        }
+    }
+
+    /// The connected display with this UUID, or nil when it is not connected.
+    static func display(withUUID uuid: String) -> CGDirectDisplayID? {
+        connectedDisplays().first { $0.uuid == uuid }?.id
+    }
+
     private static func activeDisplayBounds() -> [(id: CGDirectDisplayID, bounds: CGRect)] {
         var ids = [CGDirectDisplayID](repeating: 0, count: 16)
         var count: UInt32 = 0
