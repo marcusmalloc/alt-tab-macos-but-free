@@ -10,6 +10,9 @@ cancels, and **Q** twice within two seconds closes the highlighted window. To cy
 every display instead, turn on **Include All Displays** in the menu bar icon's menu. **Group by Display** then lists
 them under a heading per display.
 
+While the switcher is open, **Up** and **Down** move the highlight, **Left** and **Right** jump between displays
+when grouped, and **Return** switches right away without waiting for Command to be released.
+
 If someone stumbles across this and would like a feature added, feel free to create an issue and I will add it within a day.
 I will not be adding window previews.
 

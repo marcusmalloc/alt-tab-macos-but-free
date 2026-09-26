@@ -12,6 +12,8 @@ final class KeyboardTap {
     enum Key {
         case forward
         case backward
+        case nextGroup
+        case previousGroup
         case commit
         case cancel
         case quit
@@ -20,6 +22,12 @@ final class KeyboardTap {
     private enum KeyCode {
         static let tab: Int64 = 48
         static let escape: Int64 = 53
+        static let returnKey: Int64 = 36
+        static let keypadEnter: Int64 = 76
+        static let left: Int64 = 123
+        static let right: Int64 = 124
+        static let down: Int64 = 125
+        static let up: Int64 = 126
     }
 
     var handler: ((Key) -> Void)?
@@ -95,10 +103,30 @@ final class KeyboardTap {
             }
             guard inGesture else { return passThrough }
 
-            if keyCode == KeyCode.escape {
+            switch keyCode {
+            case KeyCode.escape:
                 inGesture = false
                 emit(.cancel)
                 return nil
+            case KeyCode.returnKey, KeyCode.keypadEnter:
+                // Switches now; releasing Command afterwards then does nothing more.
+                inGesture = false
+                emit(.commit)
+                return nil
+            case KeyCode.down:
+                emit(.forward)
+                return nil
+            case KeyCode.up:
+                emit(.backward)
+                return nil
+            case KeyCode.right:
+                emit(.nextGroup)
+                return nil
+            case KeyCode.left:
+                emit(.previousGroup)
+                return nil
+            default:
+                break
             }
             // Matched by character rather than key code so it works on any keyboard layout.
             if NSEvent(cgEvent: event)?.charactersIgnoringModifiers?.lowercased() == "q" {
