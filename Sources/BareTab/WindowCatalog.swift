@@ -7,11 +7,14 @@ struct WindowEntry: Identifiable {
     let id: CGWindowID
     let app: NSRunningApplication
     let icon: NSImage
+    /// The display the window belongs to, which decides its group when grouped by display.
+    let display: CGDirectDisplayID
     /// The app name, later suffixed with the window title when the app is listed more than once.
     var label: String
 }
 
-/// Finds, labels, focuses and closes windows on the current Space and the display under the pointer.
+/// Finds, labels, focuses and closes windows on the current Space, scoped to the display under the
+/// pointer unless `Settings.allDisplays` is on.
 ///
 /// The one rule here: nothing may wait on another app unless it has to. WindowServer queries are
 /// local and fast. Accessibility calls are inter-process and can block for up to `accessibilityTimeout`,
@@ -34,16 +37,23 @@ enum WindowCatalog {
     private static let settleTime: TimeInterval = 1
     private static var lastFocus: (id: CGWindowID, at: Date)?
 
-    static func snapshot() -> (display: CGDirectDisplayID, windows: [WindowEntry]) {
+    /// `headings` names each display when the windows are grouped by display, and is empty otherwise.
+    static func snapshot() -> (
+        display: CGDirectDisplayID, windows: [WindowEntry], headings: [CGDirectDisplayID: String]
+    ) {
         let display = displayUnderPointer()
+        let allDisplays = Settings.allDisplays
         let runningApps = Dictionary(
             NSWorkspace.shared.runningApplications.map { ($0.processIdentifier, $0) },
             uniquingKeysWith: { first, _ in first }
         )
 
+        let displays = activeDisplayBounds()
+
         var entries: [WindowEntry] = []
-        for window in onScreenWindows() where displayID(at: window.center) == display {
-            guard let app = runningApps[window.pid],
+        for window in onScreenWindows() {
+            guard allDisplays || displayID(at: window.center) == display,
+                  let app = runningApps[window.pid],
                   app.activationPolicy == .regular,
                   app != .current
             else { continue }
@@ -51,7 +61,9 @@ enum WindowCatalog {
             let icon = iconCache[window.pid] ?? app.icon ?? NSImage()
             iconCache[window.pid] = icon
             entries.append(WindowEntry(
-                id: window.id, app: app, icon: icon, label: app.localizedName ?? "Unknown"
+                id: window.id, app: app, icon: icon,
+                display: owningDisplay(of: window.bounds, among: displays) ?? display,
+                label: app.localizedName ?? "Unknown"
             ))
         }
 
@@ -62,8 +74,30 @@ enum WindowCatalog {
             entries.insert(entries.remove(at: index), at: 0)
         }
 
+        var headings: [CGDirectDisplayID: String] = [:]
+        if allDisplays, Settings.groupByDisplay {
+            entries = groupedByDisplay(entries)
+            for id in Set(entries.map(\.display)) {
+                headings[id] = screen(for: id)?.localizedName ?? "Display"
+            }
+        }
+
         prefetchElements(for: entries)
-        return (display, entries)
+        return (display, entries, headings)
+    }
+
+    /// Windows gathered by display. Each display keeps its windows in order and is placed by its most
+    /// recent window, so the current window stays first and a quick tap stays on the same display.
+    private static func groupedByDisplay(_ entries: [WindowEntry]) -> [WindowEntry] {
+        var order: [CGDirectDisplayID] = []
+        var groups: [CGDirectDisplayID: [WindowEntry]] = [:]
+        for entry in entries {
+            if groups[entry.display] == nil {
+                order.append(entry.display)
+            }
+            groups[entry.display, default: []].append(entry)
+        }
+        return order.flatMap { groups[$0] ?? [] }
     }
 
     static func screen(for display: CGDirectDisplayID) -> NSScreen? {
@@ -298,6 +332,49 @@ enum WindowCatalog {
             return CGMainDisplayID()
         }
         return display
+    }
+
+    /// Connected displays, identified by UUID because a display's ID can change when it is reconnected.
+    static func connectedDisplays() -> [(id: CGDirectDisplayID, uuid: String, name: String)] {
+        NSScreen.screens.compactMap { screen in
+            guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+                  let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue(),
+                  let string = CFUUIDCreateString(nil, uuid)
+            else { return nil }
+            return (id, string as String, screen.localizedName)
+        }
+    }
+
+    /// The connected display with this UUID, or nil when it is not connected.
+    static func display(withUUID uuid: String) -> CGDirectDisplayID? {
+        connectedDisplays().first { $0.uuid == uuid }?.id
+    }
+
+    private static func activeDisplayBounds() -> [(id: CGDirectDisplayID, bounds: CGRect)] {
+        var ids = [CGDirectDisplayID](repeating: 0, count: 16)
+        var count: UInt32 = 0
+        CGGetActiveDisplayList(UInt32(ids.count), &ids, &count)
+        return ids.prefix(Int(count)).map { ($0, CGDisplayBounds($0)) }
+    }
+
+    /// The display a window overlaps most, else the nearest one. The window's center is not enough:
+    /// window managers such as AeroSpace hide windows by parking them almost entirely off screen, with
+    /// a sliver left on the display they belong to.
+    private static func owningDisplay(
+        of window: CGRect, among displays: [(id: CGDirectDisplayID, bounds: CGRect)]
+    ) -> CGDirectDisplayID? {
+        func overlap(_ display: CGRect) -> CGFloat {
+            let shared = window.intersection(display)
+            return shared.isNull ? 0 : shared.width * shared.height
+        }
+        func distance(_ display: CGRect) -> CGFloat {
+            hypot(max(display.minX - window.midX, 0, window.midX - display.maxX),
+                  max(display.minY - window.midY, 0, window.midY - display.maxY))
+        }
+        if let best = displays.max(by: { overlap($0.bounds) < overlap($1.bounds) }), overlap(best.bounds) > 0 {
+            return best.id
+        }
+        return displays.min { distance($0.bounds) < distance($1.bounds) }?.id
     }
 
     private static func displayID(at point: CGPoint) -> CGDirectDisplayID? {

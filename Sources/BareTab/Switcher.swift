@@ -21,6 +21,8 @@ final class Switcher {
         switch key {
         case .forward: move(by: 1)
         case .backward: move(by: -1)
+        case .nextGroup: jump(by: 1)
+        case .previousGroup: jump(by: -1)
         case .commit: commit()
         case .cancel: end()
         case .quit: quit()
@@ -37,6 +39,16 @@ final class Switcher {
         model.selection = (model.selection + step + count) % count
     }
 
+    /// Moves the highlight to the first window of the next or previous display, wrapping around.
+    /// Does nothing unless the list is grouped by display.
+    private func jump(by step: Int) {
+        guard isActive, !model.headings.isEmpty else { return }
+        let windows = model.windows
+        let starts = windows.indices.filter { $0 == 0 || windows[$0 - 1].display != windows[$0].display }
+        guard starts.count > 1, let current = starts.lastIndex(where: { $0 <= model.selection }) else { return }
+        model.selection = starts[(current + step + starts.count) % starts.count]
+    }
+
     /// Takes the snapshot and schedules the panel. Returns false when there is nothing to switch between.
     private func begin() -> Bool {
         let snapshot = WindowCatalog.snapshot()
@@ -45,9 +57,11 @@ final class Switcher {
         isActive = true
         generation += 1
         model.windows = snapshot.windows
+        model.headings = snapshot.headings
         model.selection = 0
 
-        let display = snapshot.display
+        // A chosen display that is not connected falls back to the one under the pointer.
+        let display = Settings.switcherDisplay.flatMap(WindowCatalog.display(withUUID:)) ?? snapshot.display
         let gesture = generation
         showTimer = Timer.scheduledTimer(withTimeInterval: Self.showDelay, repeats: false) { [weak self] _ in
             MainActor.assumeIsolated {
@@ -72,6 +86,8 @@ final class Switcher {
     }
 
     private func commit() {
+        // With no snapshot taken this gesture, the list still holds the previous one.
+        guard isActive else { return }
         let selected = selectedWindow
         end()
         if let selected {

@@ -6,7 +6,15 @@
 
 Minimal native MacOS window switcher designed to keep you in flow. Hold **Command**, press **Tab** to cycle
 through the windows on the current desktop and the display under the pointer. **Shift-Tab** cycles backward, **Escape**
-cancels, and **Q** twice within two seconds closes the highlighted window.
+cancels, and **Q** twice within two seconds closes the highlighted window. To cycle through windows on
+every display instead, turn on **Include All Displays** in the menu bar icon's menu. It also lists windows that window managers such as
+AeroSpace park off screen on hidden workspaces; picking one lets the window manager switch to it. **Group by Display**
+then lists them under a heading per display. **Show Switcher On** chooses whether the switcher appears on the display under the
+pointer or always on a display you pick.
+
+While the switcher is open, **Up** and **Down** move the highlight, **Left** and **Right** jump between displays
+when grouped, and **Return** switches right away without waiting for Command to be released. With **Vim Keys** on in
+the menu, **J**, **K**, **H** and **L** do the same as Down, Up, Left and Right.
 
 If someone stumbles across this and would like a feature added, feel free to create an issue and I will add it within a day.
 I will not be adding window previews.

@@ -9,6 +9,8 @@ final class SwitcherModel: ObservableObject {
 
     @Published var windows: [WindowEntry] = []
     @Published var selection = 0
+    /// Display names shown above each group of windows; empty when the list is not grouped.
+    @Published var headings: [CGDirectDisplayID: String] = [:]
 
     /// Window armed by a first Q press. A second Q on the same window within
     /// `quitConfirmationWindow` closes it.
@@ -39,6 +41,14 @@ struct SwitcherView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             ForEach(Array(model.windows.enumerated()), id: \.element.id) { index, entry in
+                if let heading = heading(before: index) {
+                    Text(heading)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .padding(.horizontal, 10)
+                        .padding(.top, index == 0 ? 2 : 6)
+                }
                 row(for: entry, isSelected: index == model.selection)
             }
         }
@@ -62,6 +72,16 @@ struct SwitcherView: View {
             rowColor(for: entry, isSelected: isSelected),
             in: RoundedRectangle(cornerRadius: 6)
         )
+    }
+
+    /// The display name to show above `index` when that window starts a new group. Headings only
+    /// appear while more than one display is listed.
+    private func heading(before index: Int) -> String? {
+        let display = model.windows[index].display
+        guard index == 0 || model.windows[index - 1].display != display,
+              Set(model.windows.map(\.display)).count > 1
+        else { return nil }
+        return model.headings[display]
     }
 
     private func rowColor(for entry: WindowEntry, isSelected: Bool) -> Color {
