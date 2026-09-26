@@ -7,6 +7,8 @@ struct WindowEntry: Identifiable {
     let id: CGWindowID
     let app: NSRunningApplication
     let icon: NSImage
+    /// The display holding the window's center.
+    let display: CGDirectDisplayID
     /// The app name, later suffixed with the window title when the app is listed more than once.
     var label: String
 }
@@ -35,7 +37,10 @@ enum WindowCatalog {
     private static let settleTime: TimeInterval = 1
     private static var lastFocus: (id: CGWindowID, at: Date)?
 
-    static func snapshot() -> (display: CGDirectDisplayID, windows: [WindowEntry]) {
+    /// `headings` names each display when the windows are grouped by display, and is empty otherwise.
+    static func snapshot() -> (
+        display: CGDirectDisplayID, windows: [WindowEntry], headings: [CGDirectDisplayID: String]
+    ) {
         let display = displayUnderPointer()
         let allDisplays = Settings.allDisplays
         let runningApps = Dictionary(
@@ -44,8 +49,10 @@ enum WindowCatalog {
         )
 
         var entries: [WindowEntry] = []
-        for window in onScreenWindows() where allDisplays || displayID(at: window.center) == display {
-            guard let app = runningApps[window.pid],
+        for window in onScreenWindows() {
+            let windowDisplay = displayID(at: window.center)
+            guard allDisplays || windowDisplay == display,
+                  let app = runningApps[window.pid],
                   app.activationPolicy == .regular,
                   app != .current
             else { continue }
@@ -53,7 +60,8 @@ enum WindowCatalog {
             let icon = iconCache[window.pid] ?? app.icon ?? NSImage()
             iconCache[window.pid] = icon
             entries.append(WindowEntry(
-                id: window.id, app: app, icon: icon, label: app.localizedName ?? "Unknown"
+                id: window.id, app: app, icon: icon, display: windowDisplay ?? display,
+                label: app.localizedName ?? "Unknown"
             ))
         }
 
@@ -64,8 +72,30 @@ enum WindowCatalog {
             entries.insert(entries.remove(at: index), at: 0)
         }
 
+        var headings: [CGDirectDisplayID: String] = [:]
+        if allDisplays, Settings.groupByDisplay {
+            entries = groupedByDisplay(entries)
+            for id in Set(entries.map(\.display)) {
+                headings[id] = screen(for: id)?.localizedName ?? "Display"
+            }
+        }
+
         prefetchElements(for: entries)
-        return (display, entries)
+        return (display, entries, headings)
+    }
+
+    /// Windows gathered by display. Each display keeps its windows in order and is placed by its most
+    /// recent window, so the current window stays first and a quick tap stays on the same display.
+    private static func groupedByDisplay(_ entries: [WindowEntry]) -> [WindowEntry] {
+        var order: [CGDirectDisplayID] = []
+        var groups: [CGDirectDisplayID: [WindowEntry]] = [:]
+        for entry in entries {
+            if groups[entry.display] == nil {
+                order.append(entry.display)
+            }
+            groups[entry.display, default: []].append(entry)
+        }
+        return order.flatMap { groups[$0] ?? [] }
     }
 
     static func screen(for display: CGDirectDisplayID) -> NSScreen? {

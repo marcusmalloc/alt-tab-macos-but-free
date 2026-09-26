@@ -45,6 +45,7 @@ final class Switcher {
         isActive = true
         generation += 1
         model.windows = snapshot.windows
+        model.headings = snapshot.headings
         model.selection = 0
 
         let display = snapshot.display

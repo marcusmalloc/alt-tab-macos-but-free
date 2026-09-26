@@ -17,7 +17,7 @@ enum BareTabApp {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let keyboard = KeyboardTap()
     private let switcher = Switcher()
 
@@ -28,6 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     )
     private let allDisplays = NSMenuItem(
         title: "Include All Displays", action: #selector(toggleAllDisplays), keyEquivalent: ""
+    )
+    private let groupByDisplay = NSMenuItem(
+        title: "Group by Display", action: #selector(toggleGroupByDisplay), keyEquivalent: ""
     )
 
     private var permissionPoll: Timer?
@@ -66,12 +69,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         launchAtLogin.state = SMAppService.mainApp.status == .enabled ? .on : .off
         allDisplays.target = self
         allDisplays.state = Settings.allDisplays ? .on : .off
+        groupByDisplay.target = self
+        groupByDisplay.state = Settings.groupByDisplay ? .on : .off
+        groupByDisplay.indentationLevel = 1
 
         let menu = NSMenu()
         menu.addItem(statusLine)
         menu.addItem(.separator())
         menu.addItem(launchAtLogin)
         menu.addItem(allDisplays)
+        menu.addItem(groupByDisplay)
         menu.addItem(NSMenuItem(
             title: "Quit BareTab", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"
         ))
@@ -96,6 +103,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func toggleAllDisplays() {
         Settings.allDisplays.toggle()
         allDisplays.state = Settings.allDisplays ? .on : .off
+    }
+
+    @objc private func toggleGroupByDisplay() {
+        Settings.groupByDisplay.toggle()
+        groupByDisplay.state = Settings.groupByDisplay ? .on : .off
+    }
+
+    /// Grouping only means something while every display is included, so it is greyed out otherwise.
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        menuItem !== groupByDisplay || Settings.allDisplays
     }
 
     // MARK: - Accessibility permission
