@@ -26,6 +26,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let launchAtLogin = NSMenuItem(
         title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: ""
     )
+    private let allDisplays = NSMenuItem(
+        title: "Include All Displays", action: #selector(toggleAllDisplays), keyEquivalent: ""
+    )
 
     private var permissionPoll: Timer?
 
@@ -61,11 +64,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         launchAtLogin.target = self
         launchAtLogin.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        allDisplays.target = self
+        allDisplays.state = Settings.allDisplays ? .on : .off
 
         let menu = NSMenu()
         menu.addItem(statusLine)
         menu.addItem(.separator())
         menu.addItem(launchAtLogin)
+        menu.addItem(allDisplays)
         menu.addItem(NSMenuItem(
             title: "Quit BareTab", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"
         ))
@@ -85,6 +91,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSAlert(error: error).runModal()
         }
         launchAtLogin.state = service.status == .enabled ? .on : .off
+    }
+
+    @objc private func toggleAllDisplays() {
+        Settings.allDisplays.toggle()
+        allDisplays.state = Settings.allDisplays ? .on : .off
     }
 
     // MARK: - Accessibility permission

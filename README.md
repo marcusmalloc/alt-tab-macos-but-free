@@ -6,7 +6,8 @@
 
 Minimal native MacOS window switcher designed to keep you in flow. Hold **Command**, press **Tab** to cycle
 through the windows on the current desktop and the display under the pointer. **Shift-Tab** cycles backward, **Escape**
-cancels, and **Q** twice within two seconds closes the highlighted window.
+cancels, and **Q** twice within two seconds closes the highlighted window. To cycle through windows on
+every display instead, turn on **Include All Displays** in the menu bar icon's menu.
 
 If someone stumbles across this and would like a feature added, feel free to create an issue and I will add it within a day.
 I will not be adding window previews.

@@ -11,7 +11,8 @@ struct WindowEntry: Identifiable {
     var label: String
 }
 
-/// Finds, labels, focuses and closes windows on the current Space and the display under the pointer.
+/// Finds, labels, focuses and closes windows on the current Space, scoped to the display under the
+/// pointer unless `Settings.allDisplays` is on.
 ///
 /// The one rule here: nothing may wait on another app unless it has to. WindowServer queries are
 /// local and fast. Accessibility calls are inter-process and can block for up to `accessibilityTimeout`,
@@ -36,13 +37,14 @@ enum WindowCatalog {
 
     static func snapshot() -> (display: CGDirectDisplayID, windows: [WindowEntry]) {
         let display = displayUnderPointer()
+        let allDisplays = Settings.allDisplays
         let runningApps = Dictionary(
             NSWorkspace.shared.runningApplications.map { ($0.processIdentifier, $0) },
             uniquingKeysWith: { first, _ in first }
         )
 
         var entries: [WindowEntry] = []
-        for window in onScreenWindows() where displayID(at: window.center) == display {
+        for window in onScreenWindows() where allDisplays || displayID(at: window.center) == display {
             guard let app = runningApps[window.pid],
                   app.activationPolicy == .regular,
                   app != .current
